@@ -1,0 +1,423 @@
+openapi: 3.0.0
+info:
+  version: 1.0.0
+  title: 'Internet Store'
+  description: 'An API that implements simple internet store'
+  termsOfService: http://Online_Lections.com/terms-of-use
+  contact:
+    name: Liubomyr
+    url: Internet_Shop.com
+    email: yupiter2101@gmail.com
+  license:
+    name: Internet_Shop
+    url: hrrp://lisense.foo.com
+    
+servers: 
+  - url: http://dev.foo.com/v1
+    description: Dev Server
+  
+  - url: http://prod.foo.com/v1
+    description: Prod Server
+tags:
+  - name: Сustomer
+    description: Pokupets
+  - name: Goods
+    description: Tovar
+
+  
+paths:
+  /Goods:
+    post:
+      tags:
+        - Goods
+      summary: Add a new goods to the store
+      operationId: addGoods
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/goods'
+        '405':
+          description: Invalid input
+      security:
+        - Internet_Shop_auth:
+          - 'edit:goods'
+
+
+    get:
+      tags:
+        - Goods
+      summary: Get all goods
+      description: Returns all goods from the storage
+      operationId: getAllGoods
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items: 
+                  $ref: '#/components/schemas/goods'
+      security:
+        - Internet_Shop_auth:
+          - 'check:goods' 
+
+  /Goods/findByStatus:
+    get:
+      tags:
+        - Goods
+      summary: Finds goods by status
+      description: Multiple status values can be provided with comma separated strings
+      operationId: findGoodsByStatus
+      parameters:
+        - name: status
+          in: query
+          description: Status values that need to be considered for filter
+          required: true
+          explode: true
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - available
+                - sold
+              default: available
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/goods'
+            application/xml:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/goods'
+        '400':
+          description: Invalid status value
+      security:
+        - Internet_Shop_auth:
+          - 'check:goods'
+
+ 
+  '/Goods/{goodsId}':
+    get:
+      tags:
+        - Goods
+      summary: Find goods by ID
+      description: Returns a single goods
+      operationId: getGoodsById
+      parameters:
+        - name: goodsId
+          in: path
+          description: ID of goods to return
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/goods'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/goods'
+        '400':
+          description: Invalid ID supplied
+        '404':
+          description: Goods not found
+      security:
+        - Internet_Shop_auth:
+          - 'check:goods'
+
+    delete:
+      tags:
+        - Goods
+      summary: Deletes a goods
+      operationId: deletePet
+      parameters:
+        - name: api_key
+          in: header
+          required: false
+          schema:
+            type: string
+        - name: goodsId
+          in: path
+          description: Goods id to delete
+          required: true
+          schema:
+            type: integer
+            format: int64
+      responses:
+        '400':
+          description: Invalid ID supplied
+        '404':
+          description: Goods not found
+      security:
+        - Internet_Shop_auth:
+          - 'edit:goods'
+
+  /Сustomer:
+    post:
+      tags:
+        - Сustomer
+      summary: Create user
+      description: This can only be done by the logged in user.
+      operationId: createUser
+      responses:
+        default:
+          description: successful operation
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/customer'
+        description: Created user object
+        required: true
+
+    put:
+      tags:
+        - Сustomer
+      summary: Buy goods
+      operationId: Buy
+      responses:
+        '200':
+          description: Success operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/goods'
+        '400':
+          description: There is no_ goods on storage
+        '404':
+          description: Customer or productr not found
+        '405':
+          description: Validation exception 
+        '409':
+          description: Сonflict orders
+      
+      parameters:
+        - name: GoodsId
+          in: query
+          schema:
+            type: integer
+ 
+        - name: status
+          in: query
+          description: Status values that need to be considered for customers
+          required: true
+          schema:
+            type: array
+            items:
+              type: string
+              enum:
+                - available
+                - sold
+      security:
+        - Internet_Shop_auth:
+          - 'edit:goods'
+
+  /customer/login:
+    get:
+      tags:
+        - Сustomer
+      summary: Logs user into the system
+      operationId: loginUser
+      parameters:
+        - name: username
+          in: query
+          description: The user name for login
+          required: true
+          schema:
+            type: string
+        - name: password
+          in: query
+          description: The password for login in clear text
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          headers:
+            X-Rate-Limit:
+              description: calls per hour allowed by the user
+              schema:
+                type: integer
+                format: int32
+            X-Expires-After:
+              description: date in UTC when token expires
+              schema:
+                type: string
+                format: date-time
+          content:
+            application/json:
+              schema:
+                type: string
+            application/xml:
+              schema:
+                type: string
+        '400':
+          description: Invalid username/password supplied
+
+  /customer/logout:
+    get:
+      tags:
+        - Сustomer
+      summary: Logs out current logged in user session
+      operationId: logoutUser
+      responses:
+        default:
+          description: successful operation
+      security:
+        - Internet_Shop_auth:
+          - 'edit:goods'
+          
+  '/customer/{customername}':
+    get:
+      tags:
+        - Сustomer
+      summary: Get customer by customer name
+      operationId: getCustomerByName
+      parameters:
+        - name: customername
+          in: path
+          description: The name that needs to be fetched. 
+          required: true
+          schema:
+            type: string
+      responses:
+        '200':
+          description: successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/customer'
+            application/xml:
+              schema:
+                $ref: '#/components/schemas/customer'
+        '400':
+          description: Invalid customername supplied
+        '404':
+          description: Customer not found
+      security:
+        - Internet_Shop_auth:
+          - 'chek:customers'
+
+    put:
+      tags:
+        - Сustomer
+      summary: Updated customer
+      description: This can only be done by the logged in customer.
+      operationId: updateCustomer
+      parameters:
+        - name: customername
+          in: path
+          description: name that need to be updated
+          required: true
+          schema:
+            type: string
+      responses:
+        '400':
+          description: Invalid customer supplied
+        '404':
+          description: Customer not found
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/customer'
+        description: Updated customer object
+        required: true
+      security:
+        - Internet_Shop_auth:
+          - 'edit:customers'
+          
+    delete:
+      tags:
+        - Сustomer
+      summary: Delete customer
+      description: This can only be done by the logged in customer.
+      operationId: deleteCustomer
+      parameters:
+        - name: customername
+          in: path
+          description: The name that needs to be deleted
+          required: true
+          schema:
+            type: string
+      responses:
+        '400':
+          description: Invalid customername supplied
+        '404':
+          description: Customer not found
+      security:
+        - Internet_Shop_auth:
+          - 'edit:customers'
+
+components:
+  schemas: 
+  
+    customer:
+      type: object
+      properties:
+        id:
+          type: integer
+          format: int64
+        customername:
+          type: string
+        firstName:
+          type: string
+        lastName:
+          type: string
+        email:
+          type: string
+        password:
+          type: string
+        phone:
+          type: string
+        customerStatus:
+          type: integer
+          format: int32
+          description: Customer Status
+      xml:
+        name: Сustomer
+        
+    goods: 
+      description: inf about goods
+      properties: 
+        id:
+          type: integer
+          example: 228
+        name:
+          type: string
+          example: Shkarpetka
+        price:
+          type: integer
+          example: 30
+        status:
+          type: integer
+          description: good amount in the store
+          example: 10
+      
+  securitySchemes:
+    Internet_Shop_auth:
+      type: oauth2
+      flows:
+        implicit:
+          authorizationUrl: 'http://internet.shop.io/oauth/dialog'
+          scopes:
+            'edit:goods': modify goods info
+            'check:goods': check goods info
+            'edit:customers': modify customers info
+            'chek:customers': chek customers info
